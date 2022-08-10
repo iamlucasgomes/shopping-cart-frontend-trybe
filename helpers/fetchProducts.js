@@ -8,7 +8,6 @@ const fetchProducts = async (QUERY) => {
     if (!QUERY) {
       return new Error('You must provide an url');
     }
-    return error.message;
   }
 };
 
