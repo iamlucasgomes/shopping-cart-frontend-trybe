@@ -45,12 +45,21 @@ const showProducts = async () => {
   const { results } = await fetchProducts('computador');
   results.forEach(({ id: sku, title: name, thumbnail: image }) =>
     sectionItem.appendChild(createProductItemElement({ sku, name, image })));
+};
+const addCart = async () => {
   const btnsAddCart = document.querySelectorAll('.item__add');
   btnsAddCart.forEach((element) => element
     .addEventListener('click', async (event) => {
       const { id: sku, title: name, price: salePrice } = await fetchItem(getSkuFromProductItem(event
         .target.parentElement));
-        cartItems.appendChild(createCartItemElement({ sku, name, salePrice }));
+      cartItems.appendChild(createCartItemElement({ sku, name, salePrice }));
     }));
 };
-window.onload = () => showProducts();
+
+const calls = async () => {
+  await showProducts();
+  addCart();
+};
+calls();
+
+window.onload = () => { };
