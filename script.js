@@ -3,7 +3,7 @@ const cartItems = document.querySelector('.cart__items');
 const emptyBtn = document.querySelector('.empty-cart');
 const totalPrice = document.querySelector('.total-price');
 const preloader = document.querySelector('.loading');
-const initialPrice = 0.00;
+const initialPrice = 0;
 let total = 0;
 
 const removeLoader = () => {
@@ -41,20 +41,21 @@ const cartItemClickListener = (event) => {
   event.target.remove();
 };
 
-const createCartItemElement = ({ sku, name, salePrice }) => {
+const createCartItemElement = ({ sku, name, salePrice, image }) => {
   const li = document.createElement('li');
   li.className = 'cart__item';
-  li.innerText = `SKU: ${sku} | NAME: ${name} | PRICE: $${salePrice}`;
+  li.innerHTML = `<img class='img_item_cart' src="${image}"><div class='descriptionItem'>${name}<p>
+  <span class='price'>${salePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>`;
   li.addEventListener('click', () => {
     total -= salePrice;
-    totalPrice.innerText = total;
+    totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
   });
   li.addEventListener('click', cartItemClickListener);
   return li;
 };
 
 const showProducts = async () => {
-  const { results } = await fetchProducts('computador');
+  const { results } = await fetchProducts('games');
   results.forEach(({ id: sku, title: name, thumbnail: image }) =>
     sectionItem.appendChild(createProductItemElement({ sku, name, image })));
 };
@@ -63,12 +64,13 @@ const addCart = async () => {
   const btnsAddCart = document.querySelectorAll('.item__add');
   btnsAddCart.forEach((element) => element
     .addEventListener('click', async (event) => {
-      const { id: sku, title: name, price: salePrice } = await fetchItem(getSkuFromProductItem(event
+      const { id: sku, title: name, price: salePrice, thumbnail: image } = await fetchItem(getSkuFromProductItem(event
         .target.parentElement));
-      cartItems.appendChild(createCartItemElement({ sku, name, salePrice }));
+      cartItems.appendChild(createCartItemElement({ sku, name, salePrice, image }));
       total += salePrice;
-      totalPrice.innerText = total;
+      totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
       saveCartItems(cartItems.innerHTML);
+      saveTotalPrice(totalPrice.innerHTML);
     }));
 };
 
@@ -76,7 +78,9 @@ const emptyCart = async () => emptyBtn.addEventListener('click', () => {
   const cartSection = document.querySelectorAll('.cart__item');
   cartSection.forEach((list) => list.remove());
   localStorage.removeItem('cartItems');
-  totalPrice.innerText = `${initialPrice}`;
+  total = 0;
+  totalPrice.innerHTML = `Subtotal: <span class='price'>${initialPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
+  localStorage.removeItem('totalPrice');
 });
 
 const calls = async () => {
@@ -88,9 +92,8 @@ calls();
 
 window.onload = () => {
   cartItems.innerHTML = getSavedCartItems();
+  totalPrice.innerHTML = getTotalPrice();
   const cartItem = document.querySelectorAll('.cart__item');
   cartItem.forEach((list) => list.addEventListener('click', cartItemClickListener));
-  setTimeout(() => {
-    removeLoader();
-  }, 3000);
+  removeLoader();
 };
