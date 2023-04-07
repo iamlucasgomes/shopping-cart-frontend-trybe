@@ -38,7 +38,38 @@ const createProductItemElement = ({ sku, name, image }) => {
 const getSkuFromProductItem = (item) => item.querySelector('span.item__sku').innerText;
 
 const cartItemClickListener = (event) => {
-  event.target.remove();
+  if (event.target.classList.contains('remove__item')) {
+    const li = event.target.parentNode;
+    const priceElement = li.querySelector('.price');
+    const price = parseFloat(priceElement.innerText);
+
+    // if (!li.classList.contains('removed')) {
+    //   if (price > total) {
+    //     total = 0;
+    //   } else {
+    //     total -= price;
+    //     console.log(total, price)
+    //   }
+    //   totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
+    //   li.classList.add('removed');
+    // }
+
+    if (event.target.classList.contains('remove__item')) {
+      const button = event.target;
+      const li = button.parentNode;
+
+      button.setAttribute('disabled', true);
+
+      setTimeout(() => {
+        button.removeAttribute('disabled');
+      }, 1000);
+    }
+    li.remove();
+
+
+    saveCartItems(cartItems.innerHTML);
+    saveTotalPrice(totalPrice.innerHTML);
+  }
 };
 
 const createCartItemElement = ({ sku, name, salePrice, image }) => {
@@ -46,10 +77,25 @@ const createCartItemElement = ({ sku, name, salePrice, image }) => {
   li.className = 'cart__item';
   li.innerHTML = `<img class='img_item_cart' src="${image}"><div class='descriptionItem'>${name}<p>
   <span class='price'>${salePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>`;
-  li.addEventListener('click', () => {
-    total -= salePrice;
+  const removeBtn = document.createElement('button')
+  removeBtn.className = 'remove__item'
+  removeBtn.innerHTML = '<button>X</button>';
+  removeBtn.addEventListener('click', () => {
+    totalSale = total;
+    total = Array.from(cartItems.children).reduce((acc, curr) => {
+      const price = parseFloat(curr.querySelector('.price').innerText.replace(/\D/g, '')) / 100
+      return acc + price;
+    }, 0);
+    // total = Array.from(cartItems.children).reduce((acc, curr) => { 
+    //   return acc - salePrice;
+    // }, 0);
+    console.log(total)
     totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
+    li.remove();
+    saveCartItems(cartItems.innerHTML);
+    saveTotalPrice(totalPrice.innerHTML);
   });
+  li.appendChild(removeBtn);
   li.addEventListener('click', cartItemClickListener);
   return li;
 };
@@ -62,16 +108,25 @@ const showProducts = async () => {
 
 const addCart = async () => {
   const btnsAddCart = document.querySelectorAll('.item__add');
-  btnsAddCart.forEach((element) => element
-    .addEventListener('click', async (event) => {
-      const { id: sku, title: name, price: salePrice, thumbnail: image } = await fetchItem(getSkuFromProductItem(event
-        .target.parentElement));
+  btnsAddCart.forEach((element) =>
+    element.addEventListener('click', async (event) => {
+      const { id: sku, title: name, price: salePrice, thumbnail: image } = await fetchItem(
+        getSkuFromProductItem(event.target.parentElement)
+      );
       cartItems.appendChild(createCartItemElement({ sku, name, salePrice, image }));
-      total += salePrice;
-      totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
+
+      total = Array.from(cartItems.children).reduce((acc, curr) => {
+        const price = parseFloat(curr.querySelector('.price').innerText.replace(/\D/g, '')) / 100
+        return acc + price;
+      }, 0);
+      totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      })}</span>`;
       saveCartItems(cartItems.innerHTML);
       saveTotalPrice(totalPrice.innerHTML);
-    }));
+    })
+  );
 };
 
 const emptyCart = async () => emptyBtn.addEventListener('click', () => {
