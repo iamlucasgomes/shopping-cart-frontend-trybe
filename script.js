@@ -77,9 +77,7 @@ const createCartItemElement = ({ sku, name, salePrice, image }) => {
   li.className = 'cart__item';
   li.innerHTML = `<img class='img_item_cart' src="${image}"><div class='descriptionItem'>${name}<p>
   <span class='price'>${salePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>`;
-  const removeBtn = document.createElement('button')
-  removeBtn.className = 'remove__item'
-  removeBtn.innerHTML = '<button>X</button>';
+  const removeBtn = createCustomElement('button', 'remove__item', 'X');
   removeBtn.addEventListener('click', () => {
     totalSale = total;
     total = Array.from(cartItems.children).reduce((acc, curr) => {
