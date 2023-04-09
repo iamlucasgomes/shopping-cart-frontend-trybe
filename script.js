@@ -3,8 +3,7 @@ const cartItems = document.querySelector('.cart__items');
 const emptyBtn = document.querySelector('.empty-cart');
 const totalPrice = document.querySelector('.total-price');
 const preloader = document.querySelector('.loading');
-const initialPrice = 0;
-let total = 0;
+let initialPrice = 0;
 
 const removeLoader = () => {
   preloader.remove();
@@ -30,7 +29,15 @@ const createProductItemElement = ({ sku, name, image }) => {
   section.appendChild(createCustomElement('span', 'item__sku', sku));
   section.appendChild(createCustomElement('span', 'item__title', name));
   section.appendChild(createProductImageElement(image));
-  section.appendChild(createCustomElement('button', 'item__add', 'Adicionar ao carrinho!'));
+  
+  const addToCartButton = createCustomElement('button', 'item__add', 'Adicionar ao carrinho!');
+  addToCartButton.addEventListener('click', async (event) => {
+    const { id: sku, title: name, price: salePrice, thumbnail: image } = await fetchItem(
+      getSkuFromProductItem(event.target.parentElement)
+    );
+    addToCart({sku, name, salePrice, image});
+  });
+  section.appendChild(addToCartButton);
 
   return section;
 };
@@ -39,63 +46,26 @@ const getSkuFromProductItem = (item) => item.querySelector('span.item__sku').inn
 
 const cartItemClickListener = (event) => {
   if (event.target.classList.contains('remove__item')) {
-    const li = event.target.parentNode;
-    const priceElement = li.querySelector('.price');
+    const cartItem = event.target.parentNode;
+    const priceElement = cartItem.querySelector('.price');
     const price = parseFloat(priceElement.innerText);
-
-    // if (!li.classList.contains('removed')) {
-    //   if (price > total) {
-    //     total = 0;
-    //   } else {
-    //     total -= price;
-    //     console.log(total, price)
-    //   }
-    //   totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
-    //   li.classList.add('removed');
-    // }
-
-    if (event.target.classList.contains('remove__item')) {
-      const button = event.target;
-      const li = button.parentNode;
-
-      button.setAttribute('disabled', true);
-
-      setTimeout(() => {
-        button.removeAttribute('disabled');
-      }, 1000);
-    }
-    li.remove();
-
-
-    saveCartItems(cartItems.innerHTML);
-    saveTotalPrice(totalPrice.innerHTML);
+    removeFromCart(cartItem);
   }
 };
 
 const createCartItemElement = ({ sku, name, salePrice, image }) => {
-  const li = document.createElement('li');
-  li.className = 'cart__item';
-  li.innerHTML = `<img class='img_item_cart' src="${image}"><div class='descriptionItem'>${name}<p>
+  const cartItem = document.createElement('li');
+  cartItem.className = 'cart__item';
+  cartItem.innerHTML = `<img class='img_item_cart' src="${image}"><div class='descriptionItem'>${name}<p>
   <span class='price'>${salePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>`;
+  
   const removeBtn = createCustomElement('button', 'remove__item', 'X');
   removeBtn.addEventListener('click', () => {
-    totalSale = total;
-    total = Array.from(cartItems.children).reduce((acc, curr) => {
-      const price = parseFloat(curr.querySelector('.price').innerText.replace(/\D/g, '')) / 100
-      return acc + price;
-    }, 0);
-    // total = Array.from(cartItems.children).reduce((acc, curr) => { 
-    //   return acc - salePrice;
-    // }, 0);
-    console.log(total)
-    totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
-    li.remove();
-    saveCartItems(cartItems.innerHTML);
-    saveTotalPrice(totalPrice.innerHTML);
+    removeFromCart(cartItem);
   });
-  li.appendChild(removeBtn);
-  li.addEventListener('click', cartItemClickListener);
-  return li;
+  cartItem.appendChild(removeBtn);
+  cartItem.addEventListener('click', cartItemClickListener);
+  return cartItem;
 };
 
 const showProducts = async () => {
@@ -104,45 +74,44 @@ const showProducts = async () => {
     sectionItem.appendChild(createProductItemElement({ sku, name, image })));
 };
 
-const addCart = async () => {
-  const btnsAddCart = document.querySelectorAll('.item__add');
-  btnsAddCart.forEach((element) =>
-    element.addEventListener('click', async (event) => {
-      const { id: sku, title: name, price: salePrice, thumbnail: image } = await fetchItem(
-        getSkuFromProductItem(event.target.parentElement)
-      );
-      cartItems.appendChild(createCartItemElement({ sku, name, salePrice, image }));
-
-      total = Array.from(cartItems.children).reduce((acc, curr) => {
-        const price = parseFloat(curr.querySelector('.price').innerText.replace(/\D/g, '')) / 100
-        return acc + price;
-      }, 0);
-      totalPrice.innerHTML = `Subtotal: <span class='price'>${total.toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-      })}</span>`;
-      saveCartItems(cartItems.innerHTML);
-      saveTotalPrice(totalPrice.innerHTML);
-    })
-  );
+const addToCart = ({ sku, name, salePrice, image }) => {
+  cartItems.appendChild(createCartItemElement({ sku, name, salePrice, image }));
+  const price = parseInt(cartItems.querySelector('.price').innerText.replace(/\D/g, '')) / 100;
+  initialPrice = initialPrice + price;
+  totalPrice.innerHTML = `Subtotal: <span class='price'>${initialPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
+  saveCartItems(cartItems.innerHTML);
+  saveTotalPrice(totalPrice.innerHTML);
 };
+
+const removeFromCart = (cartItem) => {
+  initialPrice = Array.from(cartItems.children).reduce((total, item) => {
+    if (item !== cartItem) {
+      const itemPriceInCents = parseInt(item.querySelector('.price').innerText.replace(/\D/g, ''));
+      return total + itemPriceInCents;
+    }
+    return total;
+  }, 0);
+  const newTotalPrice = (initialPrice / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'});
+  totalPrice.innerHTML = `Subtotal: <span class='price'>${newTotalPrice}</span>`;
+  cartItem.remove();
+  saveCartItems(cartItems.innerHTML);
+  saveTotalPrice(totalPrice.innerHTML);
+}
 
 const emptyCart = async () => emptyBtn.addEventListener('click', () => {
   const cartSection = document.querySelectorAll('.cart__item');
   cartSection.forEach((list) => list.remove());
   localStorage.removeItem('cartItems');
-  total = 0;
+  initialPrice = 0; 
   totalPrice.innerHTML = `Subtotal: <span class='price'>${initialPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
   localStorage.removeItem('totalPrice');
 });
 
 const calls = async () => {
   await showProducts();
-  await addCart();
   emptyCart();
 };
 calls();
-
 window.onload = () => {
   cartItems.innerHTML = getSavedCartItems();
   totalPrice.innerHTML = getTotalPrice();
